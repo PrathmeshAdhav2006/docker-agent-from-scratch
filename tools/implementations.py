@@ -1,0 +1,13 @@
+import subprocess
+
+def list_running_containers():
+    result = subprocess.run(
+        ["/usr/bin/docker", "ps"],
+        capture_output=True,
+        text=True
+    )
+
+    if result.returncode != 0:
+        return f"Error: {result.stderr}"
+
+    return result.stdout
