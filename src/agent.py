@@ -33,6 +33,8 @@ def execute_tool_calls(tool_calls):
 
         tool_name = tool_call.function.name
 
+        print(f"\n🔧 Executing Tool: {tool_name}")
+
         tool = AVAILABLE_TOOLS.get(tool_name)
 
         if tool is None:
@@ -40,6 +42,8 @@ def execute_tool_calls(tool_calls):
             tool_result = (
                 f"Error: Tool '{tool_name}' is not available."
             )
+
+            print(f"❌ {tool_name} failed")
 
         else:
 
@@ -51,11 +55,15 @@ def execute_tool_calls(tool_calls):
 
                 tool_result = tool(**arguments)
 
+                print(f"✅ {tool_name} completed")
+
             except Exception as e:
 
                 tool_result = (
                     f"Error while executing '{tool_name}': {e}"
                 )
+
+                print(f"❌ {tool_name} failed")
 
         tool_messages.append(
             {
@@ -83,6 +91,7 @@ def run_agent():
         user_input = input("\nYou: ")
 
         if user_input.lower() == "exit":
+            print("\n👋 Goodbye!")
             break
 
         messages.append(
@@ -92,7 +101,11 @@ def run_agent():
             }
         )
 
+        round_number = 1
+
         while True:
+
+            print(f"\n🤖 Processing (Round {round_number})...")
 
             response = ask_llm(
                 messages,
@@ -102,22 +115,25 @@ def run_agent():
             assistant_message = response.choices[0].message
             finish_reason = response.choices[0].finish_reason
 
-            # No more tool calls -> final answer
+            # Final response
             if finish_reason != "tool_calls":
                 break
 
-            # Save assistant message containing tool calls
+            print("🧠 Tool(s) requested.\n")
+
             messages.append(assistant_message)
 
-            # Execute all requested tools
             tool_messages = execute_tool_calls(
                 assistant_message.tool_calls
             )
 
-            # Add tool results to conversation
             messages.extend(tool_messages)
 
-        print("\n🐳 Docker Assistant:\n")
+            round_number += 1
+
+        print("\n💬 Generating response...\n")
+
+        print("🐳 Docker Assistant:\n")
 
         print(assistant_message.content)
 
