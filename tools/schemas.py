@@ -25,3 +25,22 @@ list_images_tool = {
         }
     }
 }
+
+container_logs_tool = {
+    "type": "function",
+    "function": {
+        "name": "container_logs",
+        "description": "Displays the logs of a specified Docker container.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "container": {
+                    "type": "string",
+                    "description": "The name or ID of the Docker container."
+                }
+            },
+            "required": ["container"],
+            "additionalProperties": False
+        }
+    }
+}

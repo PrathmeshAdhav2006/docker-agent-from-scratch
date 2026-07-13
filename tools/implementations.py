@@ -24,3 +24,16 @@ def list_images():
         return f"Error: {result.stderr}"
 
     return result.stdout
+
+
+def container_logs(container):
+    result = subprocess.run(
+        ["/usr/bin/docker", "logs", container],
+        capture_output=True,
+        text=True
+    )
+
+    if result.returncode != 0:
+        return f"Error: {result.stderr}"
+
+    return result.stdout
