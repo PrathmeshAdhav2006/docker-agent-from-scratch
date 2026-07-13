@@ -49,3 +49,28 @@ def stop_container(container):
         return f"Error: {result.stderr}"
 
     return result.stdout
+
+def  remove_container(container):
+    result = subprocess.run(
+        ["/usr/bin/docker", "rm", container],
+        capture_output=True,
+        text=True
+    )
+
+    if result.returncode != 0:
+        return f"Error: {result.stderr}"
+
+    return result.stdout
+
+
+def list_all_containers():
+    result = subprocess.run(
+        ["/usr/bin/docker", "ps", "-a"],
+        capture_output=True,
+        text=True
+    )
+
+    if result.returncode != 0:
+        return f"Error: {result.stderr}"
+
+    return result.stdout

@@ -54,8 +54,7 @@ def execute_tool_calls(tool_calls):
             except Exception as e:
 
                 tool_result = (
-                    f"Error while executing "
-                    f"'{tool_name}': {e}"
+                    f"Error while executing '{tool_name}': {e}"
                 )
 
         tool_messages.append(
@@ -93,31 +92,32 @@ def run_agent():
             }
         )
 
-        response = ask_llm(
-            messages,
-            use_tools=True,
-        )
+        while True:
 
-        assistant_message = response.choices[0].message
+            response = ask_llm(
+                messages,
+                use_tools=True,
+            )
 
-        if response.choices[0].finish_reason == "tool_calls":
+            assistant_message = response.choices[0].message
+            finish_reason = response.choices[0].finish_reason
 
+            # No more tool calls -> final answer
+            if finish_reason != "tool_calls":
+                break
+
+            # Save assistant message containing tool calls
             messages.append(assistant_message)
 
+            # Execute all requested tools
             tool_messages = execute_tool_calls(
                 assistant_message.tool_calls
             )
 
+            # Add tool results to conversation
             messages.extend(tool_messages)
 
-            response = ask_llm(
-                messages,
-                use_tools=False,
-            )
-
-            assistant_message = response.choices[0].message
-
-        print(f"\n🐳 Docker Assistant:\n")
+        print("\n🐳 Docker Assistant:\n")
 
         print(assistant_message.content)
 
