@@ -11,3 +11,16 @@ def list_running_containers():
         return f"Error: {result.stderr}"
 
     return result.stdout
+
+
+def list_images():
+    result = subprocess.run(
+        ["/usr/bin/docker", "images"],
+        capture_output=True,
+        text=True
+    )
+
+    if result.returncode != 0:
+        return f"Error: {result.stderr}"
+
+    return result.stdout
