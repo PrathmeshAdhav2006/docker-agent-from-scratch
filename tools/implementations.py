@@ -37,3 +37,15 @@ def container_logs(container):
         return f"Error: {result.stderr}"
 
     return result.stdout
+
+def stop_container(container):
+    result = subprocess.run(
+        ["/usr/bin/docker", "stop", container],
+        capture_output=True,
+        text=True
+    )
+
+    if result.returncode != 0:
+        return f"Error: {result.stderr}"
+
+    return result.stdout

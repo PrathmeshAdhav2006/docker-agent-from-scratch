@@ -44,3 +44,22 @@ container_logs_tool = {
         }
     }
 }
+
+stop_container_tool = {
+    "type": "function",
+    "function": {
+        "name": "stop_container",
+        "description": "Stops a specified Docker container.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "container": {
+                    "type": "string",
+                    "description": "The name or ID of the Docker container."
+                }
+            },
+            "required": ["container"],
+            "additionalProperties": False
+        }
+    }
+}
