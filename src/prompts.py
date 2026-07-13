@@ -76,6 +76,20 @@ Assistant:
 Use the container_logs tool with the appropriate container name.
 """
 
+OUTPUT_FORMAT = """
+Response Guidelines:
+
+1. Summarize the important information first.
+
+2. If the tool output is short, include it.
+
+3. If the tool output is long, summarize it unless the user explicitly requests the raw output.
+
+4. Preserve logs exactly as returned by Docker.
+
+5. Never modify command output.
+"""
+
 DOCKER_ASSISTANT_PROMPT = f"""
 {ROLE}
 
@@ -86,4 +100,6 @@ DOCKER_ASSISTANT_PROMPT = f"""
 {LIMITATIONS}
 
 {EXAMPLES}
+
+{OUTPUT_FORMAT}
 """
