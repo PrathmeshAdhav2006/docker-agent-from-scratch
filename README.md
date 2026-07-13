@@ -1,299 +1,209 @@
-# 🐳 Docker Agent From Scratch
+# 🐳 Docker Agent
 
-A **Docker AI agent built from scratch** using Python, the OpenAI-compatible API, and Ollama. Implements raw tool calling, conversation history, and dynamic tool execution **without agent frameworks**.
+Docker Agent is a Python assistant that connects to an OpenAI-compatible chat API and executes Docker actions through explicitly registered tools. The codebase is intentionally small and direct: a single entry point launches the agent loop, the model is configured through a local client wrapper, and Docker operations are implemented as plain Python functions.
 
-[![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+> ✨ Fast, local, tool-driven Docker control with a model that follows the rules you define.
+
+This project currently uses Ollama by default, but the client is compatible with any backend that speaks the OpenAI chat completion API.
+
+## 🌈 Overview
+
+The agent keeps conversation history in memory, sends the full message thread to the model on each turn, and executes any tool calls the model requests. Tool execution is limited to the functions defined in `tools/implementations.py` and exposed through `src/config.py`.
+
+At a high level, the flow is:
+
+1. 👤 The user enters a prompt in the terminal.
+2. 🧠 `src/agent.py` sends the message history to the model.
+3. 🛠️ The model may return a normal response or one or more tool calls.
+4. ⚙️ If tools are requested, the agent executes them and appends the results to the conversation.
+5. 💬 The model is called again until it returns a final response.
+
+## 🎯 What This Project Does
+
+The current tool set supports common Docker read and control operations:
+
+- 📋 Listing running containers
+- 🧾 Listing all containers, including stopped ones
+- 🖼️ Listing local images
+- 📜 Reading container logs
+- ⏹️ Stopping a container
+- 🗑️ Removing a container
+
+The agent does not invent tools or fall back to manual commands when an operation is not implemented. If a needed capability is missing, that limitation is surfaced directly through the prompt and tool layer.
+
+## 🗂️ Project Layout
+
+```
+docker_agent/
+├── main.py
+├── llm/
+│   └── client.py
+├── src/
+│   ├── agent.py
+│   ├── config.py
+│   └── prompts.py
+├── tools/
+│   ├── implementations.py
+│   └── schemas.py
+├── verify_structure.py
+└── pyproject.toml
+```
 
 ## ✨ Features
 
-- **🔧 Raw Tool Calling** - Direct implementation of OpenAI-compatible tool/function calling without relying on agent frameworks
-- **💬 Conversation History** - Full conversation context across multiple turns
-- **🤖 Dynamic Tool Execution** - Seamlessly execute Docker commands via the LLM agent
-- **🏗️ Well-Structured** - Clean separation of concerns with organized module structure
-- **🚀 Extensible** - Easy to add new tools and capabilities
-- **⚡ Lightweight** - Minimal dependencies, only OpenAI SDK and Ollama
+- 💬 Chat loop with conversation history
+- 🔌 OpenAI-compatible tool calling
+- 🐋 Docker command execution through a controlled tool registry
+- 🧭 A prompt that tells the model to use registered tools instead of guessing
+- 🧰 Support for listing containers, listing images, showing container logs, stopping containers, removing containers, and listing all containers
+- 🪄 A simple code path that is easy to inspect and extend
 
-## 🏛️ Architecture
+## 🧱 Requirements
 
-The agent operates through a structured pipeline:
+- 🐍 Python 3.12+
+- 🐳 Docker installed locally
+- 🌐 Ollama or another OpenAI-compatible endpoint running at `http://localhost:11434/v1`
+- ⚡ `uv` for dependency management
 
-1. **User Input** → Sent to LLM with system prompt and tools
-2. **LLM Processing** → Model decides which tool to call (if any)
-3. **Tool Execution** → Agent executes the selected tool
-4. **Result Integration** → Tool result added to conversation history
-5. **Response Generation** → LLM provides final response to user
+The code also assumes the Docker CLI is available at `/usr/bin/docker`, because the tool implementations call that path directly.
 
-### Project Structure
+## 🚀 Setup
 
-```
-docker-agent/
-├── main.py                         # Entry point (minimal)
-├── llm/
-│   ├── __init__.py
-│   └── client.py                   # OpenAI client configuration
-├── src/
-│   ├── __init__.py
-│   ├── agent.py                    # Main agent loop
-│   ├── config.py                   # Tools configuration
-│   └── prompts.py                  # System prompts
-├── tools/
-│   ├── __init__.py
-│   ├── implementations.py          # Tool function implementations
-│   └── schemas.py                  # OpenAI tool schemas
-├── pyproject.toml                  # Project metadata & dependencies
-└── README.md                       # This file
-```
-
-## 🚀 Quick Start
-
-### Prerequisites
-
-- Python 3.12+
-- [Ollama](https://ollama.ai/) running locally (default: `http://localhost:11434`)
-- Docker (for running containers)
-- `uv` (Python package manager)
-
-### Installation
+<details>
+<summary>Show setup steps</summary>
 
 ```bash
-# Clone the repository
-git clone https://github.com/PrathmeshAdhav2006/docker-agent-from-scratch.git
-cd docker-agent
-
-# Install dependencies
 uv sync
+```
 
-# Start Ollama (in another terminal)
+If you are using Ollama, make sure it is running before starting the agent:
+
+```bash
 ollama serve
 ```
 
-### Running the Agent
+</details>
+
+## ▶️ Run
 
 ```bash
-# Start the agent
 uv run main.py
-
-# Example interaction:
-# You: List all running Docker containers
-# Agent: [Calls list_running_containers tool]
-# Agent: Here are the currently running containers...
-
-# Type 'exit' to quit
 ```
 
-## 🔧 Available Tools
+Type `exit` to quit the conversation.
 
-### `list_running_containers`
-Lists all currently running Docker containers with details (ID, image, name, status, ports).
+<details>
+<summary>Try these quick prompts</summary>
 
-**Usage:**
-```
-You: What Docker containers are currently running?
-Agent: [Executes list_running_containers]
-Agent: Here are your running containers...
-```
+- Show running containers
+- Show all containers
+- Show logs for nginx
+- Stop a container by name
 
-## 📝 System Prompt
+</details>
 
-The agent follows a strict set of rules defined in `src/prompts.py`:
+## 💡 Example Session
 
-1. **Use available tools** - If a suitable tool exists, use it
-2. **Never block user** - Don't ask user to manually run Docker commands
-3. **Clear communication** - State when operations are not implemented
-4. **No assumptions** - Never invent or assume unavailable tools
+```text
+You: list running containers
+Assistant: Here are the running containers...
 
-## 🛠️ Adding New Tools
-
-Adding a new Docker tool is straightforward:
-
-### 1. Implement the tool function
-
-**File:** `tools/implementations.py`
-```python
-def your_new_tool():
-    """Description of what this tool does."""
-    # Implementation here
-    return result
+You: show logs for nginx
+Assistant: Here are the logs for nginx...
 ```
 
-### 2. Define the OpenAI schema
+The exact output depends on the containers and images available on your machine.
 
-**File:** `tools/schemas.py`
-```python
-your_tool_schema = {
-    "type": "function",
-    "function": {
-        "name": "your_new_tool",
-        "description": "What this tool does",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "param1": {"type": "string", "description": "..."}
-            },
-            "required": ["param1"],
-            "additionalProperties": False
-        }
-    }
-}
-```
+## 🧰 Available Tools
 
-### 3. Register in configuration
+The agent currently exposes these tools:
 
-**File:** `src/config.py`
-```python
-from tools.implementations import your_new_tool
-from tools.schemas import your_tool_schema
+- `list_running_containers` - runs `docker ps`
+- `list_all_containers` - runs `docker ps -a`
+- `list_images` - runs `docker images`
+- `container_logs` - runs `docker logs <container>`
+- `stop_container` - runs `docker stop <container>`
+- `remove_container` - runs `docker rm <container>`
 
-AVAILABLE_TOOLS = {
-    "list_running_containers": list_running_containers,
-    "your_new_tool": your_new_tool,  # Add here
-}
+Tool names, arguments, and schemas are defined in `tools/schemas.py`, and the runtime registry lives in `src/config.py`.
 
-TOOL_SCHEMAS = [
-    list_running_containers_tool,
-    your_tool_schema,  # Add here
-]
-```
+### ⚙️ Tool Behavior
 
-That's it! The agent will automatically discover and use your new tool.
+The tool layer is intentionally thin:
 
-## 🔌 Configuration
+- Each function shells out to Docker and returns plain text output.
+- Errors are returned as strings rather than raising through the agent loop.
+- Tool arguments are passed from the model to Python using the schema definitions in `tools/schemas.py`.
+- The agent can handle multiple tool calls in one assistant turn if the model returns them.
 
-### Ollama Model
+## ⚙️ Configuration
 
-The default model is `gpt-oss:20b`. Change it in `src/agent.py`:
+The model and endpoint are configured in the code rather than through a separate config file:
 
-```python
-response = client.chat.completions.create(
-    model="gpt-oss:20b",  # Change this
-    messages=messages,
-    tools=TOOL_SCHEMAS
-)
-```
+- `llm/client.py` sets the OpenAI client base URL and API key placeholder
+- `src/agent.py` sets the default model name
+- `src/prompts.py` defines the system prompt and behavior rules
 
-Available Ollama models: [ollama.ai/library](https://ollama.ai/library)
+If you want to point the agent at a different OpenAI-compatible backend, update `llm/client.py`. If you want to use a different model name, update `src/agent.py`.
 
-### LLM Endpoint
+### 🔧 Current Defaults
 
-Configure the Ollama endpoint in `llm/client.py`:
+- Base URL: `http://localhost:11434/v1`
+- API key placeholder: `ollama`
+- Model: `gpt-oss:20b`
 
-```python
-client = OpenAI(
-    base_url="http://localhost:11434/v1",  # Change if needed
-    api_key="ollama"
-)
-```
+These defaults are designed for local Ollama usage.
 
-## 💡 How It Works
-
-### Agent Loop
-
-```
-┌─────────────────────────────────────────────┐
-│ User enters prompt                          │
-└──────────────┬──────────────────────────────┘
-               │
-               ▼
-┌─────────────────────────────────────────────┐
-│ Send to LLM with system prompt & tools      │
-└──────────────┬──────────────────────────────┘
-               │
-               ▼
-         ┌──────────────┐
-         │ LLM Response │
-         └──────┬───────┘
-                │
-        ┌───────┴───────┐
-        │               │
-   finish_reason   finish_reason
-   = "tool_calls"  = "end_turn"
-        │               │
-        ▼               ▼
-    Execute Tool    Print Response
-        │               │
-        ├───────────────┤
-        │               │
-        └───────┬───────┘
-                │
-           Continue Loop
-```
-
-### Conversation History
-
-Each message is stored with its role:
-- `"system"` - System prompt with rules
-- `"user"` - User messages
-- `"assistant"` - Agent responses with tool calls
-- `"tool"` - Tool execution results
-
-This creates a full conversation context that persists across multiple turns.
-
-## 🧪 Testing
-
-Run the verification script to ensure everything is working:
+## ✅ Verification
 
 ```bash
 uv run verify_structure.py
 ```
 
-Expected output:
-```
-✓ All imports working
-✓ Available tools: ['list_running_containers']
-✓ System prompt loaded: 478 chars
-```
+That script checks the imports, available tools, and prompt loading.
 
-## 🔐 Security Considerations
+You can also use it as a quick smoke test after changing tool registrations or prompt content.
 
-- **Tool validation** - Only registered tools can be executed
-- **Error handling** - Tool errors are caught and reported safely
-- **System isolation** - Tools run in the same environment; use containers for isolation
+## 🛠️ Extending the Agent
 
-## 📦 Dependencies
+To add a new tool, implement the Docker action in `tools/implementations.py`, define the schema in `tools/schemas.py`, and register both in `src/config.py`.
 
-- `openai` - OpenAI SDK for API compatibility with Ollama
+Suggested workflow:
 
-See `pyproject.toml` for full dependency list.
+1. ✍️ Add a Python function that performs the Docker action.
+2. 🧩 Add a matching schema so the model knows the tool name and arguments.
+3. 🔗 Register the function and schema in the config module.
+4. 📝 Update the prompt if the new tool changes the agent’s behavior rules.
+5. 🧪 Run the verification script and test the new interaction end to end.
 
-## 🤝 Contributing
+## 🧠 Prompt Behavior
 
-Contributions are welcome! To add new tools or features:
+The system prompt in `src/prompts.py` is responsible for keeping the agent disciplined.
 
-1. Fork the repository
-2. Create a feature branch
-3. Add your tool following the structure above
-4. Test thoroughly
-5. Submit a pull request
+It instructs the model to:
 
-## 📝 License
+- 🛠️ Use tools whenever live Docker information is required
+- 🚫 Avoid guessing or fabricating Docker state
+- 📣 Report when a requested feature is not implemented
+- 📦 Preserve tool output accurately
+- 🎯 Stay concise and professional
 
-This project is licensed under the MIT License - see LICENSE file for details.
+This prompt is an important part of the project because the tool layer is intentionally minimal and the model must rely on the registered commands.
 
-## 🎯 Roadmap
+## 🧯 Troubleshooting
 
-- [ ] Add more Docker tools (create, stop, remove containers)
-- [ ] Image management tools
-- [ ] Network and volume management
-- [ ] Persistent conversation history (file/database)
-- [ ] Web UI dashboard
-- [ ] Multi-model support
-- [ ] Tool parameter validation
+If the agent does not start, check the following first:
 
-## 🤔 FAQ
+- 🌐 Ollama or your OpenAI-compatible endpoint is running
+- 🐳 Docker is installed and available at `/usr/bin/docker`
+- 🔐 You have permission to run Docker commands on the machine
+- 🧠 The model name in `src/agent.py` exists in your backend
 
-**Q: Why Ollama instead of OpenAI API?**
-A: Ollama is free, open-source, and runs locally. Perfect for development and privacy-conscious applications.
+If a tool returns an error, the error text is passed back into the conversation. That usually means the Docker command failed, the container name is wrong, or Docker is not available in the current environment.
 
-**Q: Can I use this with the real OpenAI API?**
-A: Yes! Just change the `base_url` in `llm/client.py` to `https://api.openai.com/v1` and update the API key.
+If you change the tool registry and the verification script fails, inspect `src/config.py` and `tools/schemas.py` for mismatched names or missing imports.
 
-**Q: How do I handle tool parameters?**
-A: Parameters are defined in the OpenAI schema under `parameters.properties`. The agent automatically extracts them from the LLM response.
+## 📝 Notes
 
-**Q: Can I run multiple tools in one turn?**
-A: Currently, the agent processes one tool per turn. Multiple tools can be called across multiple turns via conversation history.
-
----
-
-**Built with ❤️ using Python, Ollama, and OpenAI-compatible APIs**
+- The agent only executes tools that are already registered.
+- Docker commands are run on the local machine, so the agent should be used in a trusted environment.
